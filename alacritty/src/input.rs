@@ -955,6 +955,7 @@ impl<'a, T: EventListener, A: ActionContext<T>> Processor<'a, T, A> {
                 let binding = binding.clone();
                 let suppress = binding.execute(&mut self.ctx);
 
+                // Pass through the key if any of the bindings has the `ReceiveChar` action.
                 // Don't suppress when there has been a `ReceiveChar` action
                 // or ctx.suppress_chars() was set.
                 *suppress_chars.get_or_insert(true) &= suppress;

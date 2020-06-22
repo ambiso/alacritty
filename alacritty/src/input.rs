@@ -96,13 +96,13 @@ pub trait ActionContext<T: EventListener> {
 }
 
 trait Execute<T: EventListener> {
-    fn execute<A: ActionContext<T>>(&self, ctx: &mut A);
+    fn execute<A: ActionContext<T>>(&self, ctx: &mut A) -> bool;
 }
 
 impl<T, U: EventListener> Execute<U> for Binding<T> {
     /// Execute the action associate with this binding.
     #[inline]
-    fn execute<A: ActionContext<U>>(&self, ctx: &mut A) {
+    fn execute<A: ActionContext<U>>(&self, ctx: &mut A) -> bool {
         self.action.execute(ctx)
     }
 }
@@ -125,7 +125,7 @@ impl Action {
 
 impl<T: EventListener> Execute<T> for Action {
     #[inline]
-    fn execute<A: ActionContext<T>>(&self, ctx: &mut A) {
+    fn execute<A: ActionContext<T>>(&self, ctx: &mut A) -> bool {
         match *self {
             Action::Esc(ref s) => {
                 if ctx.config().ui_config.mouse.hide_when_typing {
@@ -141,11 +141,10 @@ impl<T: EventListener> Execute<T> for Action {
             Action::CopySelection => ctx.copy_selection(ClipboardType::Selection),
             Action::CopyDynamic => {
                 if ctx.selection_is_empty() {
-                    *ctx.suppress_chars() = false;
+                    return false;
                 } else {
                     ctx.copy_selection(ClipboardType::Clipboard);
                     ctx.clear_selection();
-                    *ctx.suppress_chars() = true;
                 }
             },
             Action::Paste => {
@@ -279,8 +278,11 @@ impl<T: EventListener> Execute<T> for Action {
             Action::ClearHistory => ctx.terminal_mut().clear_screen(ClearMode::Saved),
             Action::ClearLogNotice => ctx.pop_message(),
             Action::SpawnNewInstance => ctx.spawn_new_instance(),
-            Action::ReceiveChar | Action::None => (),
-        }
+            Action::ReceiveChar | Action::None => {
+                return false;
+            },
+        };
+        true
     }
 }
 
@@ -801,12 +803,11 @@ impl<'a, T: EventListener, A: ActionContext<T>> Processor<'a, T, A> {
             if binding.is_triggered_by(*self.ctx.terminal().mode(), mods, &key) {
                 // Binding was triggered; run the action.
                 let binding = binding.clone();
-                binding.execute(&mut self.ctx);
+                let suppress = binding.execute(&mut self.ctx);
 
                 // Don't suppress when there has been a `ReceiveChar` action
                 // or ctx.suppress_chars() was set.
-                *suppress_chars.get_or_insert(true) &=
-                    binding.action != Action::ReceiveChar && *self.ctx.suppress_chars();
+                *suppress_chars.get_or_insert(true) &= suppress;
             }
         }
 

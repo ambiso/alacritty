@@ -958,7 +958,8 @@ impl<'a, T: EventListener, A: ActionContext<T>> Processor<'a, T, A> {
                 // Pass through the key if any of the bindings has the `ReceiveChar` action.
                 // Don't suppress when there has been a `ReceiveChar` action
                 // or ctx.suppress_chars() was set.
-                *suppress_chars.get_or_insert(true) &= suppress;
+                *suppress_chars.get_or_insert(true) &=
+                    binding.action != Action::ReceiveChar && *self.ctx.suppress_chars();
             }
         }
 

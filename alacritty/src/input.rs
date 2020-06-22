@@ -787,7 +787,7 @@ impl<'a, T: EventListener, A: ActionContext<T>> Processor<'a, T, A> {
     /// for its action to be executed.
     fn process_key_bindings(&mut self, input: KeyboardInput) {
         let mods = *self.ctx.modifiers();
-        let mut suppress_chars = true;
+        let mut suppress_chars = None;
 
         for i in 0..self.ctx.config().ui_config.key_bindings.len() {
             let binding = &self.ctx.config().ui_config.key_bindings[i];
@@ -805,12 +805,13 @@ impl<'a, T: EventListener, A: ActionContext<T>> Processor<'a, T, A> {
 
                 // Don't suppress when there has been a `ReceiveChar` action
                 // or ctx.suppress_chars() was set.
-                suppress_chars |= binding.action != Action::ReceiveChar && *self.ctx.suppress_chars();
+                *suppress_chars.get_or_insert(true) &=
+                    binding.action != Action::ReceiveChar && *self.ctx.suppress_chars();
             }
         }
 
         // Don't suppress char if no bindings were triggered.
-        *self.ctx.suppress_chars() = suppress_chars;
+        *self.ctx.suppress_chars() = suppress_chars.unwrap_or(false);
     }
 
     /// Attempt to find a binding and execute its action.

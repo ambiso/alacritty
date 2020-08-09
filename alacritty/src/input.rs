@@ -874,7 +874,7 @@ impl<'a, T: EventListener, A: ActionContext<T>> Processor<'a, T, A> {
                 *self.ctx.received_count() = 0;
                 self.process_key_bindings(input);
             },
-            ElementState::Released => *self.ctx.suppress_chars() = false,
+            ElementState::Released => (),
         }
     }
 
@@ -902,6 +902,8 @@ impl<'a, T: EventListener, A: ActionContext<T>> Processor<'a, T, A> {
                     self.ctx.push_search(c);
                 }
             }
+
+            *self.ctx.suppress_chars() = false;
 
             return;
         }
